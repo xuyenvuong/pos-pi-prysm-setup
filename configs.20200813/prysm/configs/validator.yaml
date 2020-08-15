@@ -1,0 +1,12 @@
+datadir: "_HOME_/.eth2"
+log-file: "_HOME_/logs/validator.log"
+
+verbosity: info
+
+wallet-dir: "_HOME_/.eth2validators/prysm-wallet-v2"
+passwords-dir: "_HOME_/.eth2validators/prysm-wallet-v2-passwords"
+wallet-password-file: "_HOME_/.password/password.txt"
+
+beacon-rpc-provider: localhost:4000
+
+graffiti: "_GRAFFITI_"

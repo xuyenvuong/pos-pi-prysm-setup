@@ -1,0 +1,15 @@
+[Unit]
+Description=Geth Node Daemon
+After=network.target auditd.service
+Wants=network.target
+
+[Service]
+EnvironmentFile=/etc/ethereum/geth.conf
+ExecStart=/usr/local/bin/geth $ARGS
+Restart=always
+User=_USER_
+
+[Install]
+WantedBy=multi-user.target
+Alias=geth.service
+

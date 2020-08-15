@@ -1,0 +1,14 @@
+[Unit]
+Description=Prysm Beacon Daemon
+After=network.target auditd.service
+Requires=network.target
+
+[Service]
+EnvironmentFile=/etc/ethereum/prysm-beacon.conf
+ExecStart=_HOME_/prysm/prysm.sh $ARGS
+Restart=always
+User=_USER_
+
+[Install]
+WantedBy=multi-user.target
+Alias=prysm-beacon.service

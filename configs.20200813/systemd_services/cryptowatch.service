@@ -1,0 +1,14 @@
+[Unit]
+Description=Cryptowatch daemon
+After=network.target
+Requires=prometheus.service
+
+[Service]
+EnvironmentFile=/etc/ethereum/cryptowatch.conf
+ExecStart=_HOME_/cryptowatch/cryptowat_exporter $ARGS
+Restart=always
+User=_USER_
+
+[Install]
+WantedBy=multi-user.target
+

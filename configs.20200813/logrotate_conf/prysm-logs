@@ -1,0 +1,13 @@
+_HOME_/logs/*.log
+{
+    rotate 7
+    daily
+    copytruncate
+    missingok
+    notifempty
+    delaycompress
+    compress
+    postrotate
+        systemctl reload prysm-logs
+    endscript
+}

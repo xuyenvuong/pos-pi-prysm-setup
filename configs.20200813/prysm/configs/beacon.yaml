@@ -1,0 +1,19 @@
+datadir: "_HOME_/.eth2"
+log-file: "_HOME_/logs/beacon.log"
+
+# Medalla Testnet Contract
+deposit-contract: 0x07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC
+contract-deployment-block: 3085928
+
+verbosity: info
+http-web3provider: "http://localhost:8545"
+
+p2p-host-ip: "_PUBLIC_IP_"
+#p2p-host-dns: "yourdomainhere.com"
+
+p2p-tcp-port: 13000
+p2p-max-peers: 60
+min-sync-peers: 3
+slasher-provider: localhost:5000
+
+graffiti: "_GRAFFITI_"

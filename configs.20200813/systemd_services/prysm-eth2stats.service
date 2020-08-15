@@ -1,0 +1,14 @@
+[Unit]
+Description=Prysm eth2stats daemon
+After=network.target
+Requires=prysm-beacon.service
+
+[Service]
+EnvironmentFile=/etc/ethereum/prysm-eth2stats.conf
+ExecStart=/usr/bin/docker $ARGS
+Restart=always
+User=_USER_
+
+[Install]
+WantedBy=multi-user.target
+Alias=prysm-eth2stats.service
