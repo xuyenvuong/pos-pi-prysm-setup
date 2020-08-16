@@ -12,9 +12,6 @@ cryptowatchURL="https://github.com/nbarrientos/cryptowat_exporter/archive/e4bcf6
 gethURL="https://gethstore.blob.core.windows.net/builds/geth-linux-arm64-1.9.19-3e064192.tar.gz"
 pythonURL="https://www.python.org/ftp/python/3.8.5/Python-3.8.5.tgz"
 
-# Update & Upgrade to latest
-sudo apt-get update && sudo apt-get upgrade
-
 
 ##### Functions
 function install_package() {
@@ -70,6 +67,10 @@ help)
 esac
 
 exit 0
+
+# Update & Upgrade to latest
+sudo apt-get update && sudo apt-get upgrade
+
 
 # Install independent packages
 
