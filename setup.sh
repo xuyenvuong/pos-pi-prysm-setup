@@ -3,6 +3,8 @@
 echo "************************* Author: MAX VUONG ***********************"
 echo "****** File setupMyEth2Node.sh - A script to quickly setup ETH2.0"
 
+set -eu
+
 # Predefine downloads endpoints
 configURL="https://cdn.discordapp.com/attachments/726496972277809284/743626826252943400/configs.20200813.zip"
 grafanaURL="https://dl.grafana.com/oss/release/grafana_7.0.3_arm64.deb"
@@ -10,17 +12,20 @@ cryptowatchURL="https://github.com/nbarrientos/cryptowat_exporter/archive/e4bcf6
 gethURL="https://gethstore.blob.core.windows.net/builds/geth-linux-arm64-1.9.19-3e064192.tar.gz"
 pythonURL="https://www.python.org/ftp/python/3.8.5/Python-3.8.5.tgz"
 
+# Update & Upgrade to latest
+sudo apt-get update && sudo apt-get upgrade
+
+
 ##### Functions
 function install_package() {
-  local package_name=$1
+  local dpkg_name=$1
 
-  if [$(dpkg-query -W -f='${Status}' $1 2>/dev/null | grep -c "ok installed") -eq 0]
+  if [ $(dpkg-query -W -f='${Status}' $dpkg_name 2>/dev/null | grep -c "ok installed") -eq 0 ]
   then
-    echo "Installing... $1"
-    sudo apt install -y $1
+    echo "Installing... $dpkg_name"
+    sudo apt install -y $dpkg_name
   fi
 }
-
 
 function create_dir() {
   local dir=$1
@@ -32,9 +37,41 @@ function create_dir() {
   fi
 }
 
-# Install independent packages
+function install() {
+  echo "Install....."
+}
 
-sudo apt-get update && sudo apt-get upgrade
+function uninstall() {
+  echo "Uninstall....."
+}
+
+function help() {
+  echo "Help..."
+}
+
+case $1 in
+install)
+    install
+    ;;
+
+uninstall)
+    uninstall
+    ;;
+
+help)
+    help
+    ;;
+
+*)
+    echo "Task '$1' is not found!"
+    echo "Please use 'setup.sh help' for more info."
+    exit 1
+    ;;
+esac
+
+exit 0
+
+# Install independent packages
 
 install_package vim
 install_package git-all
