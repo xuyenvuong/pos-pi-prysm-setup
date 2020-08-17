@@ -1,7 +1,11 @@
 #!/bin/bash
 
+echo "******** File setupMyEth2Node.sh - A script to quickly setup ETH2.0"
 echo "************************* Author: MAX VUONG ***********************"
-echo "****** File setupMyEth2Node.sh - A script to quickly setup ETH2.0"
+
+TITLE="System Information for $HOSTNAME"
+RIGHT_NOW=$(date +"%x %r %Z")
+TIME_STAMP="Updated on $RIGHT_NOW by $USER"
 
 set -eu
 
@@ -11,6 +15,8 @@ grafanaURL="https://dl.grafana.com/oss/release/grafana_7.0.3_arm64.deb"
 cryptowatchURL="https://github.com/nbarrientos/cryptowat_exporter/archive/e4bcf6e16dd2e04c4edc699e795d9450dee486ab.zip"
 gethURL="https://gethstore.blob.core.windows.net/builds/geth-linux-arm64-1.9.19-3e064192.tar.gz"
 pythonURL="https://www.python.org/ftp/python/3.8.5/Python-3.8.5.tgz"
+
+
 
 
 ##### Functions
@@ -34,8 +40,151 @@ function create_dir() {
   fi
 }
 
+function install_docker() {
+ sudo apt-get update
+ sudo apt-get install docker-ce docker-ce-cli containerd.io
+
+ sudo groupadd docker
+ sudo usermod -aG docker $USER
+
+ newgrp docker
+
+ sudo chown "$USER":"$USER" /home/"$USER"/.docker -R
+ sudo chmod g+rwx "$HOME/.docker" -R
+
+
+ sudo systemctl daemon-reload
+ sudo systemctl enable docker
+ sudo systemctl restart docker.service
+}
+
+function downloads() {
+  # Download Pryms programs
+  $HOME/prysm/prysm.sh beacon-chain --download-only
+  $HOME/prysm/prysm.sh validator --download-only
+  $HOME/prysm/prysm.sh slasher --download-only
+
+  # Download Grafana
+  if [! -e /tmp/grafana.deb]
+  then
+    wget -O /tmp/grafana.deb $grafanaURL
+  fi
+
+  # Download Python
+  if [! -e /tmp/python.tgz]
+  then
+    wget -O /tmp/python.tgz $pythonURL
+    mkdir -p /tmp/Python
+    tar -C /tmp/Python --strip-components 1 -xvf /tmp/python.tgz
+  fi
+
+  # Download Eth2.0 Deposit CLI
+  if [! -d $HOME/eth2.0-deposit-cli]
+  then
+    git clone https://github.com/ethereum/eth2.0-deposit-cli.git  $HOME/eth2.0-deposit-cli
+  fi
+
+  # Download GETH
+  if [! -e /tmp/geth.tar.gz]
+  then
+    wget -O /tmp/geth.tar.gz $gethURL
+    mkdir -p /tmp/Geth
+    tar -C /tmp/Geth --strip-components 1 -xvf /tmp/geth.tar.gz
+    sudo cp -a /tmp/Geth/geth /usr/local/bin
+  fi
+
+  # Download cryptowatch
+  if [! -e /tmp/cryptowatch.zip]
+  then
+    wget -O /tmp/cryptowatch.zip $cryptowatchURL
+    unzip -j /tmp/cryptowatch.zip -d $HOME/cryptowatch
+  fi
+
+}
+
 function install() {
   echo "Install....."
+  exit 0
+
+
+  install_docker
+
+
+
+
+
+  # Update & Upgrade to latest
+  sudo apt-get update && sudo apt-get upgrade
+
+  # Install independent packages
+  install_package vim
+  install_package git-all
+  install_package prometheus
+  install_package prometheus-node-exporter
+  install_package golang
+  install_package zip
+  install_package unzip
+  install_package build-essential
+  install_package python3-venv
+  install_package python3-pip
+
+  # Define setup directories
+  mkdir -p $HOME/{.eth2,.eth2stats,.eth2validators,.ethereum,.password,logs,prysm/configs}
+  mkdir -p /etc/ethereum
+  mkdir -p /home/prometheus/node-exporter
+
+  # Create files
+  touch $HOME/.password/password.txt
+  touch $HOME/logs/{beacon,validator,slasher}.log
+
+  # Clone configs repo
+  if [! -d /tmp/configs ]
+  then
+    git clone https://github.com/xuyenvuong/pos-pi-prysm-setup.git /tmp/prysm_configs
+  else
+    cd /tmp/prysm_configs
+    git pull origin master
+    cd $HOME
+  fi
+
+  # Repace dirs
+  find /tmp/prysm_configs -type f -exec sed -i -e "s:_HOME_:$HOME:g" {} \;
+  # Replace user
+  find /tmp/prysm_configs -type f -exec sed -i -e "s:_USER_:$USER:g" {} \;
+
+  # Replace public ip
+  #public_ip=$(curl v4.ident.me)
+  find $TEMP_DIR/configs -type f -exec sed -i -e "s:_PUBLIC_IP_:$(curl -s v4.ident.me):g" {} \;
+
+  echo "Please choose a graffiti:"
+  read graffiti
+
+  # Replace graffiti
+  find /tmp/prysm_configs -type f -exec sed -i -e "s:_GRAFFITI_:$graffiti:g" {} \;
+
+  # Move prysm.sh
+  #cp -a /tmp/prysm_configs/prysm/prysm.sh $HOME/prysm/prysm.sh
+  curl https://raw.githubusercontent.com/prysmaticlabs/prysm/master/prysm.sh --output $HOME/prysm/prysm.sh
+  sudo chmod +x $HOME/prysm/prysm.sh
+
+  # Move systemd config files
+  cp -a /tmp/prysm_configs/systemd_services/*.service /etc/systemd/system
+
+  # Move service config files
+  cp -a /tmp/prysm_configs/services_conf/*.conf /etc/ethereum
+
+  # Move logrotate config file
+  cp -a /tmp/prysm_configs/logrotate_conf/prysm-logs /etc/logrotate.d
+
+  # Move prometheus config
+  sudo useradd -m prometheus
+  sudo chown -R prometheus:prometheus /home/prometheus/
+  #cp -a $TEMP_DIR/configs/prometheus_conf/prometheus.yml
+
+  downloads
+
+
+
 }
 
 function uninstall() {
@@ -65,171 +214,3 @@ help)
     exit 1
     ;;
 esac
-
-exit 0
-
-# Update & Upgrade to latest
-sudo apt-get update && sudo apt-get upgrade
-
-
-# Install independent packages
-
-install_package vim
-install_package git-all
-install_package prometheus
-install_package prometheus-node-exporter
-install_package golang
-install_package zip
-install_package unzip
-install_package build-essential
-install_package python3-venv
-install_package python3-pip
-
-#--------------------------------------------------------------------------------#
-
-TITLE="System Information for $HOSTNAME"
-RIGHT_NOW=$(date +"%x %r %Z")
-TIME_STAMP="Updated on $RIGHT_NOW by $USER"
-
-
-# Define temp location
-START_DIR="/tmp/test"
-
-while getopts m:h option
-do
-  case ${option} in
-    m) MODE=${OPTARG};;
-    h) HELP=${OPTARG};;
-  esac
-done
-
-echo $MODE
-
-if [ "$MODE" == "live" ]
-then
-  read -n1 -p "Are you sure to perform LIVE setup? [y,N]" doit
-  case $doit in
-    y|Y) START_DIR="";;
-    n|N) echo "Setup with test mode...";;
-  esac
-fi
-
-# Define setup directorie
-echo "Now populate directories:\n"
-TEMP_DIR=$START_DIR/tmp
-
-MAIN_DIR=$START_DIR$HOME
-
-SYSTEMD_DIR=$START_DIR/etc/systemd/system
-SERVICE_CONF_DIR=$START_DIR/etc/ethereum
-
-LOGROTATE_DIR=$START_DIR/etc/logrotate.d
-USR_LOCAL_BIN=$START_DIR/usr/local/bin
-
-GRAFANA_DIR=$START_DIR/var/lib/grafana
-PROMETHEUS_DIR=$START_DIR/home/prometheus/node-exporter
-
-create_dir $TEMP_DIR
-create_dir $MAIN_DIR
-
-create_dir $SYSTEMD_DIR
-create_dir $SERVICE_CONF_DIR
-
-create_dir $LOGROTATE_DIR
-create_dir $USR_LOCAL_BIN
-
-create_dir $GRAFANA_DIR
-create_dir $PROMETHEUS_DIR
-
-mkdir -p $MAIN_DIR/{.eth2,.eth2stats,.eth2validators,.ethereum,.password,logs,prysm,prysm/configs}
-
-# Create files
-touch $MAIN_DIR/.password/password.txt
-touch $MAIN_DIR/logs/{beacon,validator,slasher}.log
-
-
-# Get preset config
-#echo "https://cdn.discordapp.com/attachments/726496972277809284/743626826252943400/configs.20200813.zip"
-#echo "Please enter the PRESET config download URL:"
-#read configURL
-
-echo "Download PRESET config from: $configURL"
-wget -O $TEMP_DIR/configs.zip $configURL
-unzip $TEMP_DIR/configs.zip -d $TEMP_DIR
-rm $TEMP_DIR/configs.zip
-
-# Repace dirs
-find $TEMP_DIR/configs -type f -exec sed -i -e "s:_HOME_:$MAIN_DIR:g" {} \;
-# Replace user
-find $TEMP_DIR/configs -type f -exec sed -i -e "s:_USER_:$USER:g" {} \;
-
-echo "Please choose a graffiti:"
-read graffiti
-
-# Replace graffiti
-find $TEMP_DIR/configs -type f -exec sed -i -e "s:_GRAFFITI_:$graffiti:g" {} \;
-
-# Replace public ip
-public_ip=$(curl v4.ident.me)
-find $TEMP_DIR/configs -type f -exec sed -i -e "s:_PUBLIC_IP_:$public_ip:g" {} \;
-
-
-# Move prysm.sh
-cp -a $TEMP_DIR/configs/prysm/prysm.sh $MAIN_DIR/prysm/prysm.sh
-sudo chmod +x $MAIN_DIR/prysm/prysm.sh
-
-# Move systemd config files
-cp -a $TEMP_DIR/configs/systemd_services/*.service $SYSTEMD_DIR
-
-# Move service config files
-cp -a $TEMP_DIR/configs/services_conf/*.conf $SERVICE_CONF_DIR
-
-# Move logrotate config file
-cp -a $TEMP_DIR/configs/logrotate_conf/prysm-logs $LOGROTATE_DIR
-
-# Move prometheus config
-sudo useradd -m prometheus
-sudo chown -R prometheus:prometheus /home/prometheus/
-#cp -a $TEMP_DIR/configs/prometheus_conf/prometheus.yml
-
-
-# Download Pryms programs
-$MAIN_DIR/prysm/prysm.sh beacon-chain --download-only
-$MAIN_DIR/prysm/prysm.sh validator --download-only
-$MAIN_DIR/prysm/prysm.sh slasher --download-only
-
-# Download Grafana
-if [! -e  $TEMP_DIR/grafana.deb]
-then
-  wget -O $TEMP_DIR/grafana.deb $grafanaURL
-fi
-
-# Download Python
-if [! -e $TEMP_DIR/python.tgz]
-then
-  wget -O $TEMP_DIR/python.tgz $pythonURL
-  mkdir -p $TEMP_DIR/Python
-  tar -C $TEMP_DIR/Python --strip-components 1 -xvf $TEMP_DIR/python.tgz
-fi
-
-# Download Eth2.0 Deposit CLI
-if [! -d $MAIN_DIR/eth2.0-deposit-cli]
-then
-  git clone https://github.com/ethereum/eth2.0-deposit-cli.git  $MAIN_DIR/eth2.0-deposit-cli
-fi
-
-# Download GETH
-if [! -e $TEMP_DIR/geth.tar.gz]
-then
-  wget -O $TEMP_DIR/geth.tar.gz $gethURL
-  mkdir -p $TEMP_DIR/Geth
-  tar -C $TEMP_DIR/Geth --strip-components 1 -xvf $TEMP_DIR/geth.tar.gz
-  sudo cp -a $TEMP_DIR/Geth/geth $USR_LOCAL_BIN
-fi
-
-# Download cryptowatch
-if [! -e $TEMP_DIR/cryptowatch.zip]
-then
-  wget -O $TEMP_DIR/cryptowatch.zip $cryptowatchURL
-  unzip -j $TEMP_DIR/cryptowatch.zip -d $MAIN_DIR/cryptowatch
-fi
